@@ -15,16 +15,15 @@ import { ShoppingCart } from "@mui/icons-material";
 import { Button, Container } from "@mui/material";
 import { red } from "@mui/material/colors";
 import Stack from "@mui/material/Stack";
-import { Routes, Route, Link } from "react-router-dom";
-import useAuthentication from "./common/auth/useAuthentication";
+import { Routes, Route, Link, useNavigate } from "react-router-dom";
 import ProductDetail from "./components/product-detail/ProductDetail";
 import AddProduct from "./components/products/AddProduct";
-import { useNavigate } from "react-router-dom";
 import ModifyProduct from "./components/products/ModifyProduct";
+import { AuthContext } from "./common/auth/AuthContext";
+import Address from "./components/address/Address";
 
 function App() {
-  const { AuthCtx } = useAuthentication();
-  const { user, logOut } = useContext(AuthCtx);
+  const { error, user, authToken, login, logOut } = useContext(AuthContext);
 
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
@@ -158,8 +157,20 @@ function App() {
               </>
             ) : (
               <Stack direction="row" spacing={4} padding={1}>
-                <Link to="/login">Login</Link>
-                <Link to="/signup">Sign Up</Link>
+                <Link
+                  to="/login"
+                  style={{ color: "white", fontSize: "16px" }}
+                  component="button"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  style={{ color: "white", fontSize: "16px" }}
+                  component="button"
+                >
+                  Sign Up
+                </Link>
               </Stack>
             )}
           </Toolbar>
@@ -174,6 +185,7 @@ function App() {
           <Route path="/productDetail" element={<ProductDetail />} />
           <Route path="/addProduct" element={<AddProduct />} />
           <Route path="/modifyProduct" element={<ModifyProduct />} />
+          <Route path="/address" element={<Address />} />
         </Routes>
       </Container>
     </div>

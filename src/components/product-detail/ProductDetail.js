@@ -7,9 +7,26 @@ import ButtonBase from "@mui/material/ButtonBase";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
 import FormControl from "@mui/material/FormControl";
 import { TextField, Button } from "@mui/material";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const ProductDetail = () => {
+  const [quantity, setQuantity] = React.useState(null);
+  const [formErrors, setFormErrors] = React.useState(null);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const productReceived = location.state;
+
+  const placeholder = (e) => {
+    e.preventDefault();
+
+    if (quantity !== null) {
+      navigate("/address", { state: { productReceived, quantity } });
+    } else {
+      setFormErrors("Quantity is required");
+    }
+  };
+
   const Img = styled("img")({
     margin: "auto",
     display: "block",
@@ -17,8 +34,6 @@ const ProductDetail = () => {
     maxHeight: "100%",
   });
 
-  const location = useLocation();
-  const productReceived = location.state;
   return (
     <Box
       sx={{
@@ -105,11 +120,15 @@ const ProductDetail = () => {
                     variant="outlined"
                     type="text"
                     autoFocus={false}
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
                     style={{ marginBottom: "20px", width: 250 }}
+                    helperText={formErrors}
                   />
                   <Button
                     variant="contained"
                     style={{ marginBottom: "20px", width: 150 }}
+                    onClick={(e) => placeholder(e)}
                   >
                     PLACE ORDER
                   </Button>

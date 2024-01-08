@@ -29,7 +29,8 @@ const Home = () => {
   const { vertical, horizontal, open } = snackPosition;
 
   const authToken =
-    "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0M0B1cGdyYWQuY29tIiwiaWF0IjoxNzA0NjM4MTY1LCJleHAiOjE3MDQ2NDY1NjV9.qNaOES5BZSrK2zdBL1LLLde_N_gWunkdy80qJEmA6XolCc3F2Eypou6WGX_SqTH8Qi_B857XTYlXjQtO3B3XxA";
+    "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0M0B1cGdyYWQuY29tIiwiaWF0IjoxNzA0Njc3OTYyLCJleHAiOjE3MDQ2ODYzNjJ9.OfDhtrF9uPuzC4wwDr6qhRsIQoYayfxNE_Ts21RelNaj14Xv7RXUu1jre742U7yMybp9g4R08H2k-J8G4E-6_A";
+
   const location = useLocation();
   const searchQuery = location.state;
   console.log(searchQuery);
@@ -54,8 +55,8 @@ const Home = () => {
           return a.price - b.price;
         } else if (sortMode === "priceLowToHigh") {
           return b.price - a.price;
-        } else {
-          return 0; // No sorting
+        } else if (sortMode === "default") {
+          return 0;
         }
       })
     );
@@ -201,12 +202,10 @@ const Home = () => {
                 sortProducts();
               }}
             >
-              <MenuItem value="">
-                <em>Default</em>
-              </MenuItem>
+              <MenuItem value="default">Default</MenuItem>
               <MenuItem value="priceHighToLow">Price: High to Low</MenuItem>
               <MenuItem value="priceLowToHigh">Price: Low to High</MenuItem>
-              <MenuItem value="">Newest</MenuItem>
+              <MenuItem value="newest">Newest</MenuItem>
             </Select>
           </FormControl>
         </Grid>

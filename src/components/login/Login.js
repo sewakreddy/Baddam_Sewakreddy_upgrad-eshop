@@ -10,19 +10,33 @@ import {
   Link,
   Paper,
 } from "@mui/material";
-import useAuthentication from "../../common/auth/useAuthentication";
 import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../common/auth/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { AuthCtx } = useAuthentication();
-  const { login, user, error } = useContext(AuthCtx);
+  const { error, user, authToken, login, logOut } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    await login(email, password);
+    if (error === null) {
+      redirectToHome();
+    }
+  };
+
   const redirectToHome = () => {
-    navigate("/home");
+    console.log(error);
+    console.log(authToken);
+    console.log(user);
+
+    if (error === null) {
+      console.log("test");
+      navigate("/home");
+    }
   };
 
   const lockIconStyle = {
@@ -78,24 +92,12 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
               />
               {/* redirect using useEffect() hook instead of this */}
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={() => {
-                  login(email, password);
-                  redirectToHome();
-                }}
-              >
+              <Button variant="contained" fullWidth onClick={handleSubmit}>
                 SIGN IN
               </Button>
             </Box>
           </form>
-          {/* extract the error message properly */}
-          {error ? (
-            <Alert severity="error">Failed to login</Alert>
-          ) : (
-            console.log(user)
-          )}
+          {error ? <Alert severity="error">{error}</Alert> : null}
           <Link sx={{ alignItems: "left" }}>
             Don't have an account? Sign Up
           </Link>

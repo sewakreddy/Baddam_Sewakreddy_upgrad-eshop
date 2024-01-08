@@ -1,13 +1,12 @@
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
-import useAuthentication from "./common/auth/useAuthentication";
+import { AuthProvider } from "./common/auth/AuthContext";
 
 const rootElement = document.getElementById("root");
 const root = createRoot(rootElement);
 
 function ConnectedApp() {
-  const { AuthProvider } = useAuthentication();
   return (
     <AuthProvider>
       <BrowserRouter>
