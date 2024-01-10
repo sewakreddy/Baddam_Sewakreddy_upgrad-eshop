@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Box } from "@mui/material";
+import React, { useState, useEffect, useContext } from "react";
+import { Box, Stack } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
@@ -10,7 +10,9 @@ import Select from "@mui/material/Select";
 import { useLocation } from "react-router-dom";
 import Product from "../products/Product";
 import Snackbar from "@mui/material/Snackbar";
-import MuiAlert from "@mui/material/Alert";
+import Alert from "../../common/Alert";
+import { AuthContext } from "../../common/auth/AuthContext";
+import { SearchContext } from "../../common/search/SearchContext";
 
 const Home = () => {
   const [categories, setCategories] = useState([]);
@@ -18,9 +20,10 @@ const Home = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [filteredProducts, setFilteredProducts] = useState(products);
   const [deleteProdError, setDeleteProdError] = useState(null);
-  const [deleteProductResponse, setDeleteProductResponse] = useState(null);
-  const [modifyProductResponse, setModifyProductResponse] = useState(null);
   const [sortMode, setSortMode] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  //To align the messages as snackbars
   const [snackPosition, setSnackPosition] = useState({
     open: false,
     vertical: "top",
@@ -28,26 +31,82 @@ const Home = () => {
   });
   const { vertical, horizontal, open } = snackPosition;
 
-  const authToken =
-    "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0M0B1cGdyYWQuY29tIiwiaWF0IjoxNzA0Njc3OTYyLCJleHAiOjE3MDQ2ODYzNjJ9.OfDhtrF9uPuzC4wwDr6qhRsIQoYayfxNE_Ts21RelNaj14Xv7RXUu1jre742U7yMybp9g4R08H2k-J8G4E-6_A";
-
-  const location = useLocation();
-  const searchQuery = location.state;
-  console.log(searchQuery);
-
-  const handleClose = (event, reason) => {
+  //To handle closing of snackbar by setting the open prop to false
+  const handleClose = (reason) => {
     if (reason === "clickaway") {
       return;
     }
     setSnackPosition({ ...snackPosition, open: false });
-    setDeleteProductResponse(null);
-    // setModifyProductResponse(null);
+    setSuccessMessage("");
+  };
+  const location = useLocation();
+
+  //To get authtoken from loginInfo of AuthContext
+  const { loginInfo } = useContext(AuthContext);
+  const authToken = loginInfo.token;
+
+  //To get the search query from SearchContext
+  const { searchQuery } = useContext(SearchContext);
+
+  //method to get categories from backend.
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:8080/api/products/categories"
+      );
+      if (response.ok) {
+        const result = await response.json();
+        setCategories(result);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
   };
 
-  const Alert = React.forwardRef(function Alert(props, ref) {
-    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
-  });
+  //method to get products from backend.
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch("http://localhost:8080/api/products");
+      if (response.ok) {
+        const result = await response.json();
+        setProducts(result);
+        const s = location.state;
+        setSuccessMessage(s);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
 
+  //method to delete a product using product Id
+  const deleteProduct = async (product) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/products/${product.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "x-auth-token": authToken,
+          },
+        }
+      );
+      if (response.status === 204) {
+        let s = `Product ${product.name} deleted successfully`;
+        setSuccessMessage(s);
+      }
+      if (!response.ok) {
+        setDeleteProdError("Error: Something went wrong");
+      }
+      // to update products after a product is deleted.
+      fetchProducts();
+    } catch (error) {
+      setDeleteProdError(error);
+      console.error("Error:", error);
+    }
+  };
+
+  //function to sort the products
   const sortProducts = () => {
     setProducts(
       products.slice().sort((a, b) => {
@@ -62,70 +121,17 @@ const Home = () => {
     );
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch(
-        "http://localhost:8080/api/products/categories"
-      );
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      const result = await response.json();
-      setCategories(result);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const response = await fetch("http://localhost:8080/api/products");
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      const result = await response.json();
-      setProducts(result);
-      setModifyProductResponse(location.state);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
-  const deleteProduct = async (product) => {
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/products/${product.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            "x-auth-token": authToken,
-          },
-        }
-      );
-      if (response.status === 204) {
-        setDeleteProductResponse(
-          `Product ${product.name} deleted successfully`
-        );
-      }
-      if (!response.ok) {
-        setDeleteProdError("Error: Something went wrong");
-      }
-      fetchProducts();
-    } catch (error) {
-      setDeleteProdError(error);
-      console.error("Error:", error);
-    }
-  };
-
+  //To render products when the component is mounted for first time.
   useEffect(() => {
     fetchProducts();
-  }, [modifyProductResponse]);
+  }, []);
 
+  //To render categoires everytime when the products is created/modified/deleted
   useEffect(() => {
     fetchCategories();
   }, [products]);
 
+  //To filter products based on selected category
   useEffect(() => {
     setFilteredProducts(
       selectedCategory !== "all"
@@ -136,6 +142,19 @@ const Home = () => {
     );
   }, [selectedCategory, products, categories]);
 
+  //To show the success or error messages on snack bar whenever the success message state is updated.
+  useEffect(() => {
+    if (successMessage) {
+      setSnackPosition({ ...snackPosition, open: true });
+    }
+  }, [successMessage]);
+
+  //to sort the products whenever the sortMode changes
+  useEffect(() => {
+    sortProducts();
+  }, [sortMode]);
+
+  //to invoke useEffect and search in the products
   useEffect(() => {
     const filtered = searchQuery
       ? products.filter((product) =>
@@ -143,115 +162,117 @@ const Home = () => {
         )
       : products;
     setFilteredProducts(filtered);
-  }, [products, searchQuery]);
-
-  useEffect(() => {
-    if (deleteProductResponse) {
-      setSnackPosition({ ...snackPosition, open: true });
-    }
-  }, [deleteProductResponse]);
-
-  useEffect(() => {
-    if (modifyProductResponse) {
-      setSnackPosition({ ...snackPosition, open: true });
-    }
-  }, [modifyProductResponse]);
+  }, [searchQuery]);
 
   return (
     <>
       <Box
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-evenly",
-          alignItems: "center",
-          height: "10%",
+          marginTop: 5,
+          p: 5,
         }}
       >
-        <ToggleButtonGroup
-          color="primary"
-          exclusive
-          aria-label="Platform"
-          value={selectedCategory}
-          onChange={(event, newCategory) => {
-            setSelectedCategory(newCategory);
-          }}
-        >
-          <ToggleButton value="all">ALL</ToggleButton>
-          {categories &&
-            categories.map((c, i) => (
-              <ToggleButton value={c.toLowerCase()} key={c.toLowerCase()}>
-                {c.toUpperCase()}
-              </ToggleButton>
-            ))}
-        </ToggleButtonGroup>
-      </Box>
-      <Grid container spacing={2}>
-        <Grid item xs={2}>
-          <FormControl sx={{ width: 180 }}>
-            <InputLabel id="sort-by-label" placeholder="Select...">
-              Sort By
-            </InputLabel>
-            <Select
-              labelId="sort-select"
-              id="sort-id"
-              label="Sort By"
-              value={sortMode}
-              onChange={(event) => {
-                setSortMode(event.target.value);
-                sortProducts();
+        <Stack spacing={4}>
+          {/* Category section*/}
+          <Box>
+            <ToggleButtonGroup
+              color="primary"
+              exclusive
+              aria-label="Platform"
+              value={selectedCategory}
+              onChange={(event, newCategory) => {
+                setSelectedCategory(newCategory);
               }}
             >
-              <MenuItem value="default">Default</MenuItem>
-              <MenuItem value="priceHighToLow">Price: High to Low</MenuItem>
-              <MenuItem value="priceLowToHigh">Price: Low to High</MenuItem>
-              <MenuItem value="newest">Newest</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-      </Grid>
+              <ToggleButton value="all">ALL</ToggleButton>
+              {categories &&
+                categories.map((c, i) => (
+                  <ToggleButton value={c.toLowerCase()} key={c.toLowerCase()}>
+                    {c.toUpperCase()}
+                  </ToggleButton>
+                ))}
+            </ToggleButtonGroup>
+          </Box>
+          {/* Sort the products section */}
+          <Grid container>
+            <Grid item xs={4}>
+              <FormControl sx={{ width: 180 }}>
+                <InputLabel id="sort-by-label" placeholder="Select...">
+                  Sort By
+                </InputLabel>
+                <Select
+                  labelId="sort-select"
+                  id="sort-id"
+                  label="Sort By"
+                  value={sortMode}
+                  onChange={(e) => {
+                    const c = e.target.value;
+                    setSortMode(c);
+                  }}
+                >
+                  <MenuItem value="default">Default</MenuItem>
+                  <MenuItem value="priceLowToHigh">Price: High to Low</MenuItem>
+                  <MenuItem value="priceHighToLow">Price: Low to High</MenuItem>
+                  <MenuItem value="newest">Newest</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+          {/*List of products section*/}
+          <Grid container>
+            <Grid item xs={2}></Grid>
+            <Grid item xs={8}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  justifyContent: "space-evenly",
+                  alignItems: "center",
+                  height: "100%",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: { xs: "center", md: "space-around" },
+                    alignContent: { xs: "center", md: "space-around" },
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    height: "100%",
+                    p: 4,
+                  }}
+                >
+                  {filteredProducts &&
+                    filteredProducts.map((product) => (
+                      <Product
+                        key={product.id}
+                        product={product}
+                        deleteFunction={deleteProduct}
+                      />
+                    ))}
+                </Box>
+              </Box>
+            </Grid>
+            <Grid item xs={2}></Grid>
+          </Grid>
 
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "row",
-          height: "75%",
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: { xs: "center", md: "space-around" },
-            alignContent: { xs: "center", md: "space-around" },
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          {filteredProducts &&
-            filteredProducts.map((product) => (
-              <Product
-                key={product.id}
-                product={product}
-                deleteFunction={deleteProduct}
-              />
-            ))}
-        </Box>
-        <Snackbar
-          anchorOrigin={{ vertical, horizontal }}
-          open={open}
-          autoHideDuration={6000}
-          onClose={handleClose}
-          key={vertical + horizontal}
-        >
-          <Alert
+          {/*To return the success message snack bar */}
+          <Snackbar
+            anchorOrigin={{ vertical, horizontal }}
+            open={open}
+            autoHideDuration={6000}
             onClose={handleClose}
-            severity="success"
-            sx={{ width: "100%" }}
+            key={vertical + horizontal}
           >
-            {deleteProductResponse}
-            {modifyProductResponse}
-          </Alert>
-        </Snackbar>
+            <Alert
+              onClose={handleClose}
+              severity="success"
+              sx={{ width: "100%" }}
+            >
+              {successMessage}
+            </Alert>
+          </Snackbar>
+        </Stack>
       </Box>
     </>
   );

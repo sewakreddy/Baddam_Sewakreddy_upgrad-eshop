@@ -6,7 +6,7 @@ import Typography from "@mui/material/Typography";
 import ButtonBase from "@mui/material/ButtonBase";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
 import FormControl from "@mui/material/FormControl";
-import { TextField, Button } from "@mui/material";
+import { TextField, Button, Container } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const ProductDetail = () => {
@@ -35,14 +35,11 @@ const ProductDetail = () => {
   });
 
   return (
-    <Box
+    <Container
       sx={{
         p: 2,
         marginTop: 20,
-        maxWidth: 1000,
-        flexGrow: 1,
-        backgroundColor: (theme) =>
-          theme.palette.mode === "dark" ? "#1A2027" : "#fff",
+        maxWidth: 500,
       }}
     >
       <Grid container spacing={2}>
@@ -138,7 +135,7 @@ const ProductDetail = () => {
           </Grid>
         </Grid>
       </Grid>
-    </Box>
+    </Container>
   );
 };
 

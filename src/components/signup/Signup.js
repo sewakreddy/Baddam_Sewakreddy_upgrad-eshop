@@ -10,8 +10,11 @@ import {
   Link,
   Paper,
   FormControl,
+  Container,
 } from "@mui/material";
-import Alert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
+import { useNavigate } from "react-router-dom";
+import Alert from "../../common/Alert";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
@@ -21,8 +24,30 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [userRequest, setUserRequest] = useState(null);
-  const [signUpResponse, setSignUpResponse] = useState(null);
-  const [error, setError] = useState(null);
+  const [signUpResponse, setSignUpResponse] = useState("");
+  const [error, setError] = useState("");
+  const [formErrors, setFormErrors] = useState({});
+
+  const navigate = useNavigate();
+
+  //To align the login errors as snackbars
+  const [snackPosition, setSnackPosition] = useState({
+    open: false,
+    vertical: "top",
+    horizontal: "right",
+  });
+
+  const { vertical, horizontal, open } = snackPosition;
+
+  //To handle closing of snackbar by setting the open prop to false and setting back errors to null
+  const handleClose = (reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackPosition({ ...snackPosition, open: false });
+    setError("");
+    setSignUpResponse("");
+  };
 
   const lockIconStyle = {
     backgroundColor: "pink",
@@ -30,20 +55,58 @@ const Signup = () => {
     padding: "8px",
   };
 
-  const signUpUser = (e) => {
+  //To handle when SIGN UP button is clicked and form is submitted
+  const handleSubmit = (e) => {
     e.preventDefault();
-    let user = {
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      password: password,
-      contactNumber: contact,
-    };
-    setUserRequest(user);
+    //To check form validation errors
+    let validationErrors = {};
+
+    if (firstName === "") {
+      validationErrors.firstName = "First name is required";
+    }
+
+    if (lastName === "") {
+      validationErrors.lastName = "Last name is required";
+    }
+
+    if (email === "") {
+      validationErrors.email = "Email is required";
+    }
+
+    //as per the backend code password must be minmum length of 6
+    if (password === "") {
+      validationErrors.password = "Password is required";
+    } else if (password.length < 6) {
+      validationErrors.password = "Password must be atleast 6 characters";
+    }
+
+    if (confirmPassword === "") {
+      validationErrors.confirmPassword = "Enter Password again";
+    } else if (password !== confirmPassword) {
+      validationErrors.confirmPassword = "Both passwords must be same";
+    }
+
+    if (contact === "") {
+      validationErrors.contact = "Contact number is required";
+    }
+
+    setFormErrors(validationErrors);
+
+    //To set the Signup Request object only when there are zero form validation errors
+    if (Object.keys(validationErrors).length === 0) {
+      setUserRequest({
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        password: password,
+        contactNumber: contact,
+      });
+    }
   };
 
+  //this effect is invoked whenever signup request is built
   useEffect(() => {
-    const handlePostRequest = async () => {
+    const signUp = async () => {
       try {
         const response = await fetch("http://localhost:8080/api/auth/signup", {
           method: "POST",
@@ -53,27 +116,39 @@ const Signup = () => {
           body: JSON.stringify(userRequest),
         });
 
-        const data = await response.json();
-        setSignUpResponse(data);
+        if (response.ok) {
+          const data = await response.json();
+          setSignUpResponse(data.message);
+          console.log(error);
+        } else {
+          //when the user is already has an account with this email, the request will be failed
+          const error = await response.json();
+          setError(error.message);
+          console.log(error);
+        }
+        setSnackPosition({ ...snackPosition, open: true });
       } catch (error) {
-        setError(error);
         console.error("Error:", error);
       }
     };
 
     if (userRequest) {
-      handlePostRequest();
+      signUp();
     }
   }, [userRequest]);
 
   return (
     <>
-      <Box
+      <Container
         sx={{
+          p: 2,
+          marginTop: 10,
+          maxWidth: 500,
           display: "flex",
-          justifyContent: "space-evenly",
+          justifyContent: { xs: "center", md: "space-around" },
+          alignContent: { xs: "center", md: "space-around" },
           alignItems: "center",
-          height: "45%",
+          flexWrap: "wrap",
         }}
       >
         <Stack sx={{ width: "50%" }} spacing={2}>
@@ -97,6 +172,7 @@ const Signup = () => {
                 fullWidth
                 autoFocus={false}
                 value={firstName}
+                helperText={formErrors.firstName}
                 style={{ marginBottom: "10px" }}
                 onChange={(e) => setFirstName(e.target.value)}
               />
@@ -109,6 +185,7 @@ const Signup = () => {
                 fullWidth
                 autoFocus={false}
                 value={lastName}
+                helperText={formErrors.lastName}
                 style={{ marginBottom: "10px" }}
                 onChange={(e) => setLastName(e.target.value)}
               />
@@ -121,6 +198,7 @@ const Signup = () => {
                 fullWidth
                 autoFocus={false}
                 value={email}
+                helperText={formErrors.email}
                 style={{ marginBottom: "10px" }}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -132,6 +210,7 @@ const Signup = () => {
                 type="password"
                 fullWidth
                 autoFocus={false}
+                helperText={formErrors.password}
                 value={password}
                 style={{ marginBottom: "10px" }}
                 onChange={(e) => setPassword(e.target.value)}
@@ -145,6 +224,7 @@ const Signup = () => {
                 fullWidth
                 autoFocus={false}
                 value={confirmPassword}
+                helperText={formErrors.confirmPassword}
                 style={{ marginBottom: "10px" }}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
@@ -157,23 +237,62 @@ const Signup = () => {
                 fullWidth
                 autoFocus={false}
                 value={contact}
+                helperText={formErrors.contact}
                 style={{ marginBottom: "20px" }}
                 onChange={(e) => setContact(e.target.value)}
               />
-              <Button variant="contained" fullWidth onClick={signUpUser}>
+              <Button variant="contained" fullWidth onClick={handleSubmit}>
                 SIGN UP
               </Button>
             </Box>
           </FormControl>
-          {signUpResponse ? (
-            <Alert severity="success">{signUpResponse.message}</Alert>
-          ) : null}
-          {error ? <Alert severity="error">{error}</Alert> : null}
-          <Link sx={{ alignItems: "left" }}>
-            Already have an account? Sign In
-          </Link>
+          {error !== "" ? (
+            <Snackbar
+              anchorOrigin={{ vertical, horizontal }}
+              open={open}
+              autoHideDuration={6000}
+              onClose={handleClose}
+              key={vertical + horizontal}
+            >
+              <Alert
+                onClose={handleClose}
+                severity="error"
+                sx={{ width: "100%" }}
+              >
+                {error}
+              </Alert>
+            </Snackbar>
+          ) : (
+            <Snackbar
+              anchorOrigin={{ vertical, horizontal }}
+              open={open}
+              autoHideDuration={6000}
+              onClose={handleClose}
+              key={vertical + horizontal}
+            >
+              <Alert
+                onClose={handleClose}
+                severity="success"
+                sx={{ width: "100%" }}
+              >
+                {signUpResponse}
+              </Alert>
+            </Snackbar>
+          )}
+          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+            <Link
+              component="button"
+              onClick={() => {
+                navigate("/login");
+              }}
+            >
+              <Typography variant="body1">
+                Already have an account? Sign In
+              </Typography>
+            </Link>
+          </Box>
         </Stack>
-      </Box>
+      </Container>
       <Box display="flex" flexDirection="column" minHeight="10vh">
         <Paper elevation={0} style={{ padding: "16px", marginTop: "auto" }}>
           <Typography variant="body2" color="textSecondary" align="center">

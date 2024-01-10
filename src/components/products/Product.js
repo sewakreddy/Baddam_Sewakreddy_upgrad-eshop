@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
@@ -16,10 +16,14 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
+import { AuthContext } from "../../common/auth/AuthContext";
 
-function Product({ product, deleteFunction, modifyFunction }) {
+function Product({ product, deleteFunction }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+
+  const { loginInfo } = useContext(AuthContext);
+  const role = loginInfo.role;
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -59,7 +63,7 @@ function Product({ product, deleteFunction, modifyFunction }) {
       <CardActions>
         <Grid container spacing={2}>
           <Grid item xs={8}>
-            <Box display="flex" justifyContent="flex-start" ma>
+            <Box display="flex" justifyContent="flex-start">
               <Button
                 variant="contained"
                 size="small"
@@ -70,19 +74,21 @@ function Product({ product, deleteFunction, modifyFunction }) {
             </Box>
           </Grid>
           <Grid item xs={2}>
-            <IconButton aria-label="edit">
-              <EditIcon
-                onClick={() => navigate("/modifyProduct", { state: product })}
-              />
+            <IconButton
+              aria-label="edit"
+              onClick={() => navigate("/modifyProduct", { state: product })}
+            >
+              {role === "ADMIN" ? <EditIcon /> : null}
             </IconButton>
           </Grid>
           <Grid item xs={2}>
-            <IconButton aria-label="delete">
-              <DeleteIcon
-                onClick={() => {
-                  handleClickOpen();
-                }}
-              />
+            <IconButton
+              aria-label="delete"
+              onClick={() => {
+                handleClickOpen();
+              }}
+            >
+              {role === "ADMIN" ? <DeleteIcon /> : null}
             </IconButton>
             <Dialog
               open={open}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import CreatableSelect from "react-select/creatable";
 import {
   Box,
@@ -8,15 +8,14 @@ import {
   Button,
   Paper,
   FormControl,
+  Container,
 } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
+import { AuthContext } from "../../common/auth/AuthContext";
 
 const ModifyProduct = () => {
   const location = useLocation();
   const productReceived = location.state;
-  const navigate = useNavigate();
-
-  const [id, setId] = useState(productReceived.id);
   const [name, setName] = useState(productReceived.name);
   const [manufacturer, setManufacturer] = useState(
     productReceived.manufacturer
@@ -33,60 +32,97 @@ const ModifyProduct = () => {
   const [modifyProductRequest, setModifyProductRequest] = useState(null);
   const [modifyProductResponse, setModifyProductResponse] = useState("");
   const [modifyProdError, setModifyProdError] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
 
-  const authToken =
-    "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0M0B1cGdyYWQuY29tIiwiaWF0IjoxNzA0NjM4MTY1LCJleHAiOjE3MDQ2NDY1NjV9.qNaOES5BZSrK2zdBL1LLLde_N_gWunkdy80qJEmA6XolCc3F2Eypou6WGX_SqTH8Qi_B857XTYlXjQtO3B3XxA";
+  const id = productReceived.id;
 
+  const navigate = useNavigate();
+
+  const { loginInfo } = useContext(AuthContext);
+
+  const authToken = loginInfo.token;
+
+  //to create a new category in categories dropdown
   const createOption = (label) => ({
     label,
     value: label.toLowerCase().replace(/\W/g, ""),
   });
 
-  const buildProductRequest = (e) => {
+  //to handle when MODIFY PRODUCT button is clicked.
+  const buildModifyProductRequest = (e) => {
     e.preventDefault();
-    let productRequest = {
-      id: id,
-      name: name,
-      category: category.label,
-      price: price,
-      description: description,
-      manufacturer: manufacturer,
-      availableItems: availableItems,
-      imageUrl: imageUrl,
-    };
-    setModifyProductRequest(productRequest);
+
+    setFormErrors(null);
+
+    //To check form validation errors
+    let validationErrors = {};
+    if (name === "") {
+      validationErrors.name = "Name is required";
+    }
+
+    if (category === "") {
+      validationErrors.category = "Category is required";
+    }
+
+    if (availableItems === "") {
+      validationErrors.availableItems = "Available Items are required";
+    }
+
+    if (manufacturer === "") {
+      validationErrors.manufacturer = "Manufacturer is required";
+    }
+
+    if (price === "") {
+      validationErrors.price = "Price is required";
+    }
+    setFormErrors(validationErrors);
+    //To set the addProductRequest object only when there are zero form validation errors
+    if (Object.keys(validationErrors).length === 0) {
+      setModifyProductRequest({
+        id: id,
+        name: name,
+        category: category.label,
+        price: price,
+        description: description,
+        manufacturer: manufacturer,
+        availableItems: availableItems,
+        imageUrl: imageUrl,
+      });
+    }
   };
 
+  //to fetch the categories when component mounts for first time for dropdown
   useEffect(() => {
     const getCategories = async () => {
       try {
         const response = await fetch(
           "http://localhost:8080/api/products/categories"
         );
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        const result = await response.json();
+        if (response.ok) {
+          const result = await response.json();
 
-        if (result && result.length > 0) {
-          setCategories(
-            result.map((category) => {
-              createOption(category);
-              if (productReceived.category === category) {
-                setCategory(createOption(category));
-              }
-            })
-          );
-        }
+          if (result && result.length > 0) {
+            setCategories(
+              result.map((category) => {
+                //To auto populate the existing product category
+                if (productReceived.category === category) {
+                  setCategory(createOption(category));
+                }
+                return createOption(category);
+              })
+            );
+          }
 
-        setIsLoading(false);
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
     getCategories();
-  }, []);
+  }, [productReceived.category]);
 
+  //this effect is invoked every time modifyProductRequest object is built
   useEffect(() => {
     const modifyProduct = async (product) => {
       try {
@@ -103,7 +139,6 @@ const ModifyProduct = () => {
         );
         if (response.ok) {
           const s = `Product ${product.name} modified successfully`;
-          console.log(s);
           setModifyProductResponse(s);
         } else {
           setModifyProdError("Error: Something went wrong. Try again!");
@@ -118,6 +153,7 @@ const ModifyProduct = () => {
     }
   }, [modifyProductRequest]);
 
+  //Once the product is modified, navigating user back to home
   useEffect(() => {
     if (modifyProductResponse) {
       navigate("/home", { state: modifyProductResponse });
@@ -126,16 +162,20 @@ const ModifyProduct = () => {
     if (modifyProdError) {
       navigate("/home", { state: modifyProdError });
     }
-  }, [modifyProductResponse, modifyProdError]);
+  }, [modifyProductResponse, modifyProdError, navigate]);
 
   return (
     <>
-      <Box
+      <Container
         sx={{
+          p: 2,
+          marginTop: 20,
+          maxWidth: 500,
           display: "flex",
-          justifyContent: "space-evenly",
+          justifyContent: { xs: "center", md: "space-around" },
+          alignContent: { xs: "center", md: "space-around" },
           alignItems: "center",
-          height: "45%",
+          flexWrap: "wrap",
         }}
       >
         <Stack sx={{ width: "50%" }} spacing={2}>
@@ -156,6 +196,7 @@ const ModifyProduct = () => {
                 fullWidth
                 autoFocus={false}
                 value={name}
+                helperText={formErrors.name}
                 style={{ marginBottom: "10px" }}
                 inputProps={{ maxLength: 35 }}
                 onChange={(e) => setName(e.target.value)}
@@ -178,6 +219,7 @@ const ModifyProduct = () => {
                 fullWidth
                 autoFocus={false}
                 value={manufacturer}
+                helperText={formErrors.manufacturer}
                 style={{ marginBottom: "10px" }}
                 onChange={(e) => setManufacturer(e.target.value)}
               />
@@ -189,6 +231,7 @@ const ModifyProduct = () => {
                 type="number"
                 fullWidth
                 autoFocus={false}
+                helperText={formErrors.availableItems}
                 value={availableItems}
                 style={{ marginBottom: "10px" }}
                 onChange={(e) => setAvailableItems(e.target.value)}
@@ -201,6 +244,7 @@ const ModifyProduct = () => {
                 type="number"
                 fullWidth
                 autoFocus={false}
+                helperText={formErrors.price}
                 value={price}
                 style={{ marginBottom: "10px" }}
                 onChange={(e) => setPrice(e.target.value)}
@@ -230,14 +274,14 @@ const ModifyProduct = () => {
               <Button
                 variant="contained"
                 fullWidth
-                onClick={buildProductRequest}
+                onClick={buildModifyProductRequest}
               >
                 MODIFY PRODUCT
               </Button>
             </Box>
           </FormControl>
         </Stack>
-      </Box>
+      </Container>{" "}
       <Box display="flex" flexDirection="column" minHeight="10vh">
         <Paper elevation={0} style={{ padding: "16px", marginTop: "auto" }}>
           <Typography variant="body2" color="textSecondary" align="center">
